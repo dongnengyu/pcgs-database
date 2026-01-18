@@ -71,52 +71,65 @@ function renderCoins(coins) {
 
     grid.innerHTML = coins.map(coin => `
         <div class="coin-card">
-            ${coin.local_image_path ?
-                `<img class="coin-image" src="/${coin.local_image_path}" alt="硬币图片" />` :
-                `<div class="coin-image" style="display:flex;align-items:center;justify-content:center;color:#999;">无图片</div>`
-            }
-            <div class="coin-info">
-                <div class="coin-header">
-                    <span class="coin-grade">${coin.grade || 'N/A'}</span>
-                    <span class="coin-cert">#${coin.cert_number}</span>
+            <div class="coin-content">
+                <div class="coin-info">
+                    <div class="coin-title">${coin.date_mintmark || ''} ${coin.denomination || ''} ${coin.variety || ''}</div>
+                    <div class="coin-cert">#${coin.cert_number}</div>
+                    <table class="coin-details">
+                        <tr>
+                            <td class="detail-label">等级</td>
+                            <td class="detail-value">${coin.grade || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">PCGS 编号</td>
+                            <td class="detail-value">${coin.pcgs_number || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">PCGS价格指南价值</td>
+                            <td class="detail-value">${coin.price_guide_value || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">日期, 造币厂厂标</td>
+                            <td class="detail-value">${coin.date_mintmark || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">面额</td>
+                            <td class="detail-value">${coin.denomination || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">数量</td>
+                            <td class="detail-value">${coin.population || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">高评级数量</td>
+                            <td class="detail-value">${coin.pop_higher || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">版别</td>
+                            <td class="detail-value">${coin.variety || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">地区</td>
+                            <td class="detail-value">${coin.region || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">安全保障</td>
+                            <td class="detail-value">${coin.security || '-'}</td>
+                        </tr>
+                        <tr>
+                            <td class="detail-label">包装盒类型</td>
+                            <td class="detail-value">${coin.holder_type || '-'}</td>
+                        </tr>
+                    </table>
+                    <div class="coin-actions">
+                        <button class="btn-delete" onclick="deleteCoin('${coin.cert_number}')">删除</button>
+                    </div>
                 </div>
-                <div class="coin-title">${coin.date_mintmark || ''} ${coin.denomination || ''} ${coin.variety || ''}</div>
-                <div class="coin-details">
-                    <div class="detail-item">
-                        <span class="detail-label">PCGS#</span>
-                        <span class="detail-value">${coin.pcgs_number || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">价格指南</span>
-                        <span class="detail-value">${coin.price_guide_value || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">存世量</span>
-                        <span class="detail-value">${coin.population || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">高评级数量</span>
-                        <span class="detail-value">${coin.pop_higher || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">铸造量</span>
-                        <span class="detail-value">${coin.mintage || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">地区</span>
-                        <span class="detail-value">${coin.region || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">安全保障</span>
-                        <span class="detail-value">${coin.security || '-'}</span>
-                    </div>
-                    <div class="detail-item">
-                        <span class="detail-label">包装盒类型</span>
-                        <span class="detail-value">${coin.holder_type || '-'}</span>
-                    </div>
-                </div>
-                <div class="coin-actions">
-                    <button class="btn-delete" onclick="deleteCoin('${coin.cert_number}')">删除</button>
+                <div class="coin-image-wrapper">
+                    ${coin.local_image_path ?
+                        `<img class="coin-image" src="/${coin.local_image_path}" alt="硬币图片" />` :
+                        `<div class="coin-image no-image">无图片</div>`
+                    }
                 </div>
             </div>
         </div>
