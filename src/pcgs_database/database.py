@@ -34,6 +34,7 @@ def init_db() -> None:
             population TEXT,
             pop_higher TEXT,
             mintage TEXT,
+            variety TEXT,
             region TEXT,
             holder_type TEXT,
             security TEXT,
@@ -44,6 +45,12 @@ def init_db() -> None:
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # Add variety column if it doesn't exist (migration for existing databases)
+    try:
+        cursor.execute("ALTER TABLE coins ADD COLUMN variety TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
 
     conn.commit()
     conn.close()
@@ -69,9 +76,9 @@ def save_coin(coin_data: dict) -> bool:
             """
             INSERT OR REPLACE INTO coins (
                 cert_number, pcgs_number, grade, date_mintmark, denomination,
-                price_guide_value, population, pop_higher, mintage, region,
-                holder_type, security, image_url, local_image_path, raw_data, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                price_guide_value, population, pop_higher, mintage, variety,
+                region, holder_type, security, image_url, local_image_path, raw_data, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 coin_data.get("cert_number"),
@@ -83,6 +90,7 @@ def save_coin(coin_data: dict) -> bool:
                 coin_data.get("population"),
                 coin_data.get("pop_higher"),
                 coin_data.get("mintage"),
+                coin_data.get("variety"),
                 coin_data.get("region"),
                 coin_data.get("holder_type"),
                 coin_data.get("security"),

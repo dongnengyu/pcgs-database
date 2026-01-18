@@ -12,6 +12,39 @@ from .config import get_settings
 
 logger = logging.getLogger(__name__)
 
+# Field mapping from Chinese/English labels to database field names
+FIELD_MAPPING = {
+    # Chinese labels
+    "等级": "grade",
+    "pcgs_编号": "pcgs_#",
+    "pcgs编号": "pcgs_#",
+    "pcgs价格指南价值": "price_guide_value",
+    "日期,_造帀厂厂标": "date,_mintmark",
+    "日期,_造币厂厂标": "date,_mintmark",
+    "面额": "denomination",
+    "数量": "population",
+    "高评级数量": "pop_higher",
+    "版别": "variety",
+    "地区": "region",
+    "安全保障": "security",
+    "包装盒类型": "holder_type",
+    "铸造量": "mintage",
+    # English labels (for non-Chinese pages)
+    "grade": "grade",
+    "pcgs_#": "pcgs_#",
+    "pcgs_number": "pcgs_#",
+    "price_guide_value": "price_guide_value",
+    "date,_mintmark": "date,_mintmark",
+    "denomination": "denomination",
+    "population": "population",
+    "pop_higher": "pop_higher",
+    "variety": "variety",
+    "region": "region",
+    "security": "security",
+    "holder_type": "holder_type",
+    "mintage": "mintage",
+}
+
 
 async def download_image(url: str, save_path: str) -> bool:
     """
@@ -202,7 +235,33 @@ async def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dic
 
         await browser.close()
 
-    return coin_data
+    # Normalize field names using mapping
+    normalized_data: dict = {
+        "cert_number": cert_number,
+        "url": coin_data.get("url", url),
+    }
+
+    for key, value in coin_data.items():
+        # Skip internal/meta fields
+        if key.startswith("_") or key in ("cert_number", "url", "details"):
+            continue
+
+        # Normalize key: lowercase and replace spaces
+        normalized_key = key.lower().replace(" ", "_").replace(":", "")
+
+        # Map to database field name
+        db_field = FIELD_MAPPING.get(normalized_key, normalized_key)
+        normalized_data[db_field] = value
+
+    # Keep special fields
+    if "image_urls" in coin_data:
+        normalized_data["image_urls"] = coin_data["image_urls"]
+    if "saved_images" in coin_data:
+        normalized_data["saved_images"] = coin_data["saved_images"]
+    if "title" in coin_data:
+        normalized_data["title"] = coin_data["title"]
+
+    return normalized_data
 
 
 async def main() -> None:
