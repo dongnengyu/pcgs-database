@@ -42,7 +42,7 @@ async def scrape_coin(
         raise HTTPException(status_code=400, detail="Certificate number cannot be empty")
 
     try:
-        coin_data = fetch_pcgs_cert(cert_number)
+        coin_data = await fetch_pcgs_cert(cert_number)
         save_coin(coin_data)
         return ScrapeResponse(success=True, data=coin_data)
     except Exception as e:

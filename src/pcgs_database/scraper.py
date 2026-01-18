@@ -1,19 +1,19 @@
-"""PCGS certificate information scraper using Playwright"""
+"""PCGS certificate information scraper using Playwright Async API"""
 
 import logging
 import os
 import re
 from typing import Optional
 
-import requests
-from playwright.sync_api import sync_playwright
+import httpx
+from playwright.async_api import async_playwright
 
 from .config import get_settings
 
 logger = logging.getLogger(__name__)
 
 
-def download_image(url: str, save_path: str) -> bool:
+async def download_image(url: str, save_path: str) -> bool:
     """
     Download image to local path.
 
@@ -30,19 +30,20 @@ def download_image(url: str, save_path: str) -> bool:
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Referer": "https://www.pcgs.com/",
         }
-        response = requests.get(url, headers=headers, timeout=30)
-        response.raise_for_status()
-        with open(save_path, "wb") as f:
-            f.write(response.content)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            with open(save_path, "wb") as f:
+                f.write(response.content)
         return True
     except Exception as e:
         logger.error("Failed to download image %s: %s", url, e)
         return False
 
 
-def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
+async def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
     """
-    Fetch PCGS certificate information using Playwright.
+    Fetch PCGS certificate information using Playwright Async API.
 
     Args:
         cert_number: PCGS certificate number
@@ -54,20 +55,20 @@ def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
     settings = get_settings()
     url = f"https://www.pcgs.com/cert/{cert_number}"
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context(
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             viewport={"width": 1920, "height": 1080},
         )
-        page = context.new_page()
+        page = await context.new_page()
 
         # Navigate to page
-        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        await page.goto(url, wait_until="domcontentloaded", timeout=60000)
 
         # Wait for page to load
-        page.wait_for_timeout(3000)
+        await page.wait_for_timeout(3000)
 
         coin_data: dict = {
             "cert_number": cert_number,
@@ -75,12 +76,12 @@ def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
         }
 
         # Get page HTML
-        html = page.content()
+        html = await page.content()
 
         # Extract title
-        title_elem = page.query_selector("h1")
+        title_elem = await page.query_selector("h1")
         if title_elem:
-            coin_data["title"] = title_elem.inner_text().strip()
+            coin_data["title"] = (await title_elem.inner_text()).strip()
 
         # Try to get grade information
         grade_selectors = [
@@ -91,9 +92,9 @@ def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
             ".certification-grade",
         ]
         for selector in grade_selectors:
-            elem = page.query_selector(selector)
+            elem = await page.query_selector(selector)
             if elem:
-                text = elem.inner_text().strip()
+                text = (await elem.inner_text()).strip()
                 if text and re.search(r"MS|PR|AU|XF|VF|EF|F|VG|G|AG|\d+", text):
                     coin_data["grade"] = text
                     break
@@ -108,46 +109,45 @@ def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
             "[class*='spec']",
         ]
         for selector in spec_selectors:
-            elems = page.query_selector_all(selector)
+            elems = await page.query_selector_all(selector)
             for elem in elems:
-                text = elem.inner_text().strip()
+                text = (await elem.inner_text()).strip()
                 if text:
                     coin_data.setdefault("details", []).append(text)
 
         # Find table data
-        rows = page.query_selector_all("tr")
+        rows = await page.query_selector_all("tr")
         for row in rows:
-            cells = row.query_selector_all("td, th")
+            cells = await row.query_selector_all("td, th")
             if len(cells) >= 2:
                 key = (
-                    cells[0]
-                    .inner_text()
+                    (await cells[0].inner_text())
                     .strip()
                     .lower()
                     .replace(" ", "_")
                     .replace(":", "")
                 )
-                value = cells[1].inner_text().strip()
+                value = (await cells[1].inner_text()).strip()
                 if key and value and len(key) < 50:
                     coin_data[key] = value
 
         # Find definition lists
-        dts = page.query_selector_all("dt")
-        dds = page.query_selector_all("dd")
+        dts = await page.query_selector_all("dt")
+        dds = await page.query_selector_all("dd")
         for dt, dd in zip(dts, dds):
             key = (
-                dt.inner_text().strip().lower().replace(" ", "_").replace(":", "")
+                (await dt.inner_text()).strip().lower().replace(" ", "_").replace(":", "")
             )
-            value = dd.inner_text().strip()
+            value = (await dd.inner_text()).strip()
             if key and value:
                 coin_data[key] = value
 
         # Find images
         images: list[str] = []
-        img_elems = page.query_selector_all("img")
+        img_elems = await page.query_selector_all("img")
         for img in img_elems:
-            src = img.get_attribute("src") or ""
-            alt = img.get_attribute("alt") or ""
+            src = await img.get_attribute("src") or ""
+            alt = await img.get_attribute("alt") or ""
             if src and (
                 "coin" in src.lower()
                 or "coin" in alt.lower()
@@ -172,7 +172,7 @@ def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
                     ext = os.path.splitext(img_url.split("?")[0])[-1] or ".jpg"
                     filename = f"{cert_number}_{i + 1}{ext}"
                     save_path = os.path.join(img_dir, filename)
-                    if download_image(img_url, save_path):
+                    if await download_image(img_url, save_path):
                         # Store relative path for serving
                         relative_path = f"data/images/{filename}"
                         saved_images.append(relative_path)
@@ -182,14 +182,15 @@ def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dict:
         # Save debug info
         coin_data["_html_length"] = len(html)
 
-        browser.close()
+        await browser.close()
 
     return coin_data
 
 
-def main() -> None:
+async def main() -> None:
     """Main function for testing the scraper"""
     import json
+    import asyncio
 
     logging.basicConfig(level=logging.INFO)
 
@@ -199,7 +200,7 @@ def main() -> None:
     logger.info("-" * 50)
 
     try:
-        data = fetch_pcgs_cert(cert_number)
+        data = await fetch_pcgs_cert(cert_number)
         print(json.dumps(data, indent=2, ensure_ascii=False))
     except Exception as e:
         logger.error("Fetch failed: %s", e)
@@ -209,4 +210,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
