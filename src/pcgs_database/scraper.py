@@ -142,23 +142,41 @@ async def fetch_pcgs_cert(cert_number: str, download_images: bool = True) -> dic
             if key and value:
                 coin_data[key] = value
 
-        # Find images
+        # Find images - PCGS uses cloudfront.net for coin images
         images: list[str] = []
+
+        # Method 1: Find img tags with cloudfront URLs
         img_elems = await page.query_selector_all("img")
         for img in img_elems:
             src = await img.get_attribute("src") or ""
-            alt = await img.get_attribute("alt") or ""
-            if src and (
-                "coin" in src.lower()
-                or "coin" in alt.lower()
-                or "image" in src.lower()
-                or cert_number in src
-            ):
-                if src.startswith("//"):
-                    src = "https:" + src
-                elif src.startswith("/"):
-                    src = "https://www.pcgs.com" + src
+            if src and "cloudfront.net/cert/" in src:
+                # Prefer large images over small/thumbnail
+                if "/small/" in src:
+                    src = src.replace("/small/", "/large/")
                 images.append(src)
+
+        # Method 2: Search HTML for cloudfront URLs (backup)
+        if not images:
+            import re
+            cloudfront_pattern = r'https://d1htnxwo4o0jhw\.cloudfront\.net/cert/\d+/large/[^\s"\']+'
+            html_images = re.findall(cloudfront_pattern, html)
+            images.extend(html_images)
+
+        # Fallback: original method for older pages
+        if not images:
+            for img in img_elems:
+                src = await img.get_attribute("src") or ""
+                alt = await img.get_attribute("alt") or ""
+                if src and (
+                    "coin" in src.lower()
+                    or "coin" in alt.lower()
+                    or cert_number in src
+                ):
+                    if src.startswith("//"):
+                        src = "https:" + src
+                    elif src.startswith("/"):
+                        src = "https://www.pcgs.com" + src
+                    images.append(src)
 
         if images:
             coin_data["image_urls"] = list(set(images))  # Deduplicate
