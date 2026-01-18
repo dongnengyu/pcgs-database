@@ -11,6 +11,8 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .database import init_db
 from .routers import coins
+from .routers import tasks
+from .scheduler import scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -26,8 +28,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup
     logger.info("Starting PCGS Coin Database...")
     init_db()
+
+    # Start task scheduler
+    await scheduler.start()
+
     yield
+
     # Shutdown
+    await scheduler.stop()
     logger.info("Shutting down PCGS Coin Database...")
 
 
@@ -57,11 +65,17 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(coins.router)
+    app.include_router(tasks.router)
 
     @app.get("/")
     async def index() -> FileResponse:
         """Serve the frontend page"""
         return FileResponse(str(settings.STATIC_DIR / "index.html"))
+
+    @app.get("/tasks")
+    async def tasks_page() -> FileResponse:
+        """Serve the tasks management page"""
+        return FileResponse(str(settings.STATIC_DIR / "tasks.html"))
 
     return app
 
