@@ -62,45 +62,61 @@ function renderCoins(coins) {
     const grid = document.getElementById('coinsGrid');
     const stats = document.getElementById('stats');
 
-    stats.textContent = `Showing ${coins.length} / ${allCoins.length} coins`;
+    stats.textContent = `显示 ${coins.length} / ${allCoins.length} 枚硬币`;
 
     if (coins.length === 0) {
-        grid.innerHTML = '<div class="empty">No matching data</div>';
+        grid.innerHTML = '<div class="empty">无匹配数据</div>';
         return;
     }
 
     grid.innerHTML = coins.map(coin => `
         <div class="coin-card">
             ${coin.local_image_path ?
-                `<img class="coin-image" src="/${coin.local_image_path}" alt="Coin image" />` :
-                `<div class="coin-image" style="display:flex;align-items:center;justify-content:center;color:#999;">No image</div>`
+                `<img class="coin-image" src="/${coin.local_image_path}" alt="硬币图片" />` :
+                `<div class="coin-image" style="display:flex;align-items:center;justify-content:center;color:#999;">无图片</div>`
             }
             <div class="coin-info">
                 <div class="coin-header">
                     <span class="coin-grade">${coin.grade || 'N/A'}</span>
                     <span class="coin-cert">#${coin.cert_number}</span>
                 </div>
-                <div class="coin-title">${coin.date_mintmark || ''} ${coin.denomination || ''}</div>
+                <div class="coin-title">${coin.date_mintmark || ''} ${coin.denomination || ''} ${coin.variety || ''}</div>
                 <div class="coin-details">
                     <div class="detail-item">
                         <span class="detail-label">PCGS#</span>
                         <span class="detail-value">${coin.pcgs_number || '-'}</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Price Guide</span>
+                        <span class="detail-label">价格指南</span>
                         <span class="detail-value">${coin.price_guide_value || '-'}</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Population</span>
+                        <span class="detail-label">存世量</span>
                         <span class="detail-value">${coin.population || '-'}</span>
                     </div>
                     <div class="detail-item">
-                        <span class="detail-label">Mintage</span>
+                        <span class="detail-label">高评级数量</span>
+                        <span class="detail-value">${coin.pop_higher || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">铸造量</span>
                         <span class="detail-value">${coin.mintage || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">地区</span>
+                        <span class="detail-value">${coin.region || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">安全保障</span>
+                        <span class="detail-value">${coin.security || '-'}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">包装盒类型</span>
+                        <span class="detail-value">${coin.holder_type || '-'}</span>
                     </div>
                 </div>
                 <div class="coin-actions">
-                    <button class="btn-delete" onclick="deleteCoin('${coin.cert_number}')">Delete</button>
+                    <button class="btn-delete" onclick="deleteCoin('${coin.cert_number}')">删除</button>
                 </div>
             </div>
         </div>
@@ -110,23 +126,23 @@ function renderCoins(coins) {
 async function loadCoins() {
     const grid = document.getElementById('coinsGrid');
     const stats = document.getElementById('stats');
-    grid.innerHTML = '<div class="loading">Loading...</div>';
+    grid.innerHTML = '<div class="loading">加载中...</div>';
 
     try {
         const response = await fetch('/api/coins');
         const data = await response.json();
 
         allCoins = data.coins;
-        stats.textContent = `Total ${data.total} coins`;
+        stats.textContent = `共 ${data.total} 枚硬币`;
 
         if (data.coins.length === 0) {
-            grid.innerHTML = '<div class="empty">No data yet. Enter a certificate number to scrape.</div>';
+            grid.innerHTML = '<div class="empty">暂无数据，请输入证书号抓取</div>';
             return;
         }
 
         renderCoins(allCoins);
     } catch (error) {
-        grid.innerHTML = '<div class="empty">Failed to load. Please refresh.</div>';
+        grid.innerHTML = '<div class="empty">加载失败，请刷新重试</div>';
     }
 }
 
@@ -136,12 +152,12 @@ async function scrapeCoin() {
     const certNumber = input.value.trim();
 
     if (!certNumber) {
-        showMessage('Please enter a certificate number', 'error');
+        showMessage('请输入证书号', 'error');
         return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Scraping...';
+    btn.textContent = '抓取中...';
 
     try {
         const response = await fetch('/api/scrape', {
@@ -153,33 +169,33 @@ async function scrapeCoin() {
         const data = await response.json();
 
         if (response.ok) {
-            showMessage(`Scraped successfully: ${certNumber}`, 'success');
+            showMessage(`抓取成功: ${certNumber}`, 'success');
             input.value = '';
             loadCoins();
         } else {
-            showMessage(`Scrape failed: ${data.detail}`, 'error');
+            showMessage(`抓取失败: ${data.detail}`, 'error');
         }
     } catch (error) {
-        showMessage('Network error. Please retry.', 'error');
+        showMessage('网络错误，请重试', 'error');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Scrape';
+        btn.textContent = '抓取';
     }
 }
 
 async function deleteCoin(certNumber) {
-    if (!confirm(`Are you sure you want to delete certificate ${certNumber}?`)) return;
+    if (!confirm(`确定删除证书号 ${certNumber} 吗？`)) return;
 
     try {
         const response = await fetch(`/api/coins/${certNumber}`, { method: 'DELETE' });
         if (response.ok) {
-            showMessage('Deleted successfully', 'success');
+            showMessage('删除成功', 'success');
             loadCoins();
         } else {
-            showMessage('Delete failed', 'error');
+            showMessage('删除失败', 'error');
         }
     } catch (error) {
-        showMessage('Network error', 'error');
+        showMessage('网络错误', 'error');
     }
 }
 

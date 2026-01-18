@@ -74,7 +74,7 @@ h1 {
 
 .coins-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     gap: 20px;
 }
 
@@ -133,22 +133,28 @@ h1 {
 .coin-details {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    font-size: 14px;
+    gap: 10px 20px;
+    font-size: 13px;
 }
 
 .detail-item {
     display: flex;
     justify-content: space-between;
+    padding: 4px 0;
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .detail-label {
     color: #888;
+    flex-shrink: 0;
 }
 
 .detail-value {
     color: #333;
     font-weight: 500;
+    text-align: right;
+    word-break: break-word;
+    max-width: 60%;
 }
 
 .coin-actions {
